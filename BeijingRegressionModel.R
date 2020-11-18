@@ -54,7 +54,7 @@ plot(training_set$totalPrice, training_set$communityAverage)
 corrs_wrt_totalPrice <- cor(select_if(training_set, is.numeric), training_set$totalPrice) 
 corrs_all <- cor(select_if(training_set, is.numeric)) # correlation between all variables
 # DATA VISUALIZATION
-#construct side by side boxplots to visualize the totoal prices across different buildding types
+#construct side by side boxplots to visualize the totoal prices across different building types
 boxplot(totalPrice~buildingType,
         data=training_set,
         main="Different boxplots for building type",
