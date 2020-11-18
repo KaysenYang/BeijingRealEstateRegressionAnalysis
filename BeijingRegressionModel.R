@@ -1,4 +1,4 @@
-setwd("/Users/eylulaygun/Desktop/Year\ 5/STAT\ 306/Group\ project/BeijingRealEstateRegressionAnalysis" )
+setwd("C:/Users/Kayson/Documents/GitHub/BeijingRealEstateRegressionAnalysis" )
 getwd()
 library("dplyr")
 
@@ -6,7 +6,8 @@ library("dplyr")
 # data source: https://www.kaggle.com/ruiqurm/lianjia
 #data <- read.csv("new.csv", header = TRUE, fileEncoding="latin1") # had to typeset encoding to eliminate type convert error
 # data simple has DOM removed from it, as the majority of DOM values are na, which reduces dataset size enormously( cuts N in half)
-data_simple <- read.csv("new copy.csv", header = TRUE, fileEncoding="latin1") # had to typeset encoding to eliminate type convert error 
+data_simple <- read.csv("new copy.csv", header = TRUE) #, fileEncoding="latin1"# had to typeset encoding to eliminate type convert error 
+data_simple
 str(data_simple) # sanity check
 # remove NA values
 data_simple <- na.omit( data.frame(data_simple)) 
@@ -23,14 +24,10 @@ data_simple$buildingStructure <- as.factor(data_simple$buildingStructure)
 # typeset tradeTime to Date Type
 data_simple$tradeTime <- as.Date(data_simple$tradeTime)
 data_simple$totalPriceLog <- log(data_simple$totalPrice* 10000)
-
-
 str(data_simple)
-
 
 # CREATE training and testing data
 N <- length(data_simple$id)
-
 set.seed(2020)
 all_indices = seq(1, N)
 training_indices = sort(sample(1:N, N/2, replace = FALSE))
@@ -40,9 +37,8 @@ testing_set = data_simple[testing_indices,]
 
 all.equal(sort(c(training_indices, testing_indices)), all_indices) # sanity check to ensure we separated tests correctly
 
-
 # EXPLORE CORRELATION BETWEEN VARIABLES
-plot(training_set$totalPrice, training_set$square*training_set$price) # perfectly linear relationship
+plot(training_set$totalPrice, training_set$square*training_set$price) # perfectly linear relationship. They are highly correlated with each other and are bound to have perfect linear relationship.
 cor(training_set$totalPrice, training_set$square*training_set$price) 
 cor(training_set$totalPrice, training_set$price)
 # it wouldn't make sense to calculate pearson correlation between a categorical variable that looks like an "integer" with a continuous var such as totalPrice
@@ -57,13 +53,31 @@ plot(training_set$totalPrice, training_set$communityAverage)
 # correlation matrices
 corrs_wrt_totalPrice <- cor(select_if(training_set, is.numeric), training_set$totalPrice) 
 corrs_all <- cor(select_if(training_set, is.numeric)) # correlation between all variables
-
-# 
 # DATA VISUALIZATION
+#construct side by side boxplots to visualize the totoal prices across different buildding types
+boxplot(totalPrice~buildingType,
+        data=training_set,
+        main="Different boxplots for building type",
+        xlab="differnent building type",
+        ylab="total price",
+        col="orange",
+        border="black"
+)
+boxplot(totalPrice~buildingStructure,
+        data=training_set,
+        main="Different boxplots for building type",
+        xlab="differnent building type",
+        ylab="total price",
+        col="orange",
+        border="black"
+);
+
 library(ggplot2)
 library(data.table) #useful library for doing fast operations on large datasets
 # trying to understand the most expensive neighborhoods
+training_set
 mean_price_by_district <- aggregate(training_set[, 4:4 ], list(training_set$district), mean)
+mean_price_by_district
 mean_price_by_district <- data.frame(district_number = mean_price_by_district$Group.1, mean_price = round( mean_price_by_district$x))
 p <- ggplot(data = mean_price_by_district, aes(x = district_number, y = mean_price)) 
 p + geom_bar(stat="identity", fill = "steelblue") + geom_text(aes(label=mean_price), vjust=1.5, color="white", size=3.5) +
@@ -72,14 +86,27 @@ p + geom_bar(stat="identity", fill = "steelblue") + geom_text(aes(label=mean_pri
 
 # How is community score changing across districts
 mean_community_score_by_district <- aggregate(training_set[, 19:19 ], list(training_set$district), mean)
+mean_community_score_by_district
+#What's the variance of total prices changing across districts
+mean_community_variance_by_district <- aggregate(training_set[, 19:19 ], list(training_set$district), var)
+mean_community_variance_by_district
 mean_community_score_by_district <- data.frame(district_number = mean_community_score_by_district$Group.1, community_avg = round( mean_community_score_by_district$x))
 
 p2 <- ggplot(data = mean_community_score_by_district, aes(x = district_number, y = community_avg)) 
 p2 + geom_bar(stat="identity", fill = "steelblue") + geom_text(aes(label=community_avg), vjust=1.5, color="white", size=3.5) +
   theme(axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1)) + 
   ggtitle("Distribution of Mean Community Score Across Districts")
+
 # the bar plot is very similar to the housing prices
 # potential multicollinearity problem, will need to be adressed
+mean_community_variance_by_district <- aggregate(training_set[, 19:19 ], list(training_set$district), var)
+mean_community_variance_by_district
+mean_community_variance_by_district <- data.frame(district_number = variance_community_score_by_district$Group.1, community_avg = round( mean_community_variance_by_district$x))
+
+p2 <- ggplot(data = mean_community_score_by_district, aes(x = district_number, y = community_avg)) 
+p2 + geom_bar(stat="identity", fill = "steelblue") + geom_text(aes(label=community_var), vjust=1.5, color="white", size=3.5) +
+  theme(axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1)) + 
+  ggtitle("Distribution of Variance Community Score Across Districts")
 # TODO: find a better way to explore collinearity
 
 # TODO : how are building types distributed across districts? 
@@ -92,8 +119,16 @@ p + geom_bar(stat="identity", fill = "steelblue") + geom_text(aes(label=var_pric
   theme(axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1)) +
   ggtitle("Distribution of Var House Price Across Districts")
 
-
-# BASIC LINEAR MODELS
+#plot correlation matrices(heatmap)
+corrs_all2<-corrs_all[-c(1,2),-c(1,2)]
+#library(reshape2)
+#melted_corrs <- melt(corrs_all2)
+#ggplot(data = melted_corrs, aes(x=Var1, y=Var2, fill=value)) + 
+#  geom_tile()
+install.packages("corrplot")
+library(corrplot)
+corrplot(corrs_all2, type = "lower")
+ MODELS
 training_set$district <- relevel(training_set$district, ref = 13) # use the cheapest district as baseline
 model_basic1 <- lm(totalPrice ~ square + district, data = training_set)
 summary(model1)
