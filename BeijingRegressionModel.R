@@ -30,7 +30,9 @@ str(data_simple)
 N <- length(data_simple$id)
 set.seed(2020)
 all_indices = seq(1, N)
-training_indices = sort(sample(1:N, N/2, replace = FALSE))
+training_indices = sort(sample(1:N, 3*N/5, replace = FALSE))
+
+
 training_set = data_simple[training_indices,]
 testing_indices =  sort(all_indices[!all_indices %in% training_indices]) # remove training indices from set
 testing_set = data_simple[testing_indices,]
@@ -47,7 +49,6 @@ plot(training_set$totalPrice, training_set$district)
 # additional plots for other categorical variables
 plot(training_set$totalPrice, training_set$buildingType)
 plot(training_set$totalPrice, training_set$buildingStructure)
-
 plot(training_set$totalPrice, training_set$communityAverage)
 
 # correlation matrices
@@ -63,6 +64,7 @@ boxplot(totalPrice~buildingType,
         col="orange",
         border="black"
 )
+##construct side by side boxplots to visualize the totoal prices across different building structures
 boxplot(totalPrice~buildingStructure,
         data=training_set,
         main="Different boxplots for building type",
@@ -83,13 +85,16 @@ p <- ggplot(data = mean_price_by_district, aes(x = district_number, y = mean_pri
 p + geom_bar(stat="identity", fill = "steelblue") + geom_text(aes(label=mean_price), vjust=1.5, color="white", size=3.5) +
   theme(axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1)) +
   ggtitle("Distribution of Mean House Price Across Districts")
-
+# trying to understand the variance of housing price of different districts
+var_price_by_district <- aggregate(training_set[, 4:4 ], list(training_set$district), var)
+var_price_by_district
+var_price_by_district <- data.frame(district_number = var_price_by_district$Group.1, variance_price = round( var_price_by_district$x))
+p <- ggplot(data = var_price_by_district, aes(x = district_number, y = variance_price)) 
+p + geom_bar(stat="identity", fill = "steelblue") + geom_text(aes(label=variance_price), vjust=1.5, color="white", size=3.5) +
+  theme(axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1)) +
+  ggtitle("Distribution of Variance of House Price Across Districts")
 # How is community score changing across districts
 mean_community_score_by_district <- aggregate(training_set[, 19:19 ], list(training_set$district), mean)
-mean_community_score_by_district
-#What's the variance of total prices changing across districts
-mean_community_variance_by_district <- aggregate(training_set[, 19:19 ], list(training_set$district), var)
-mean_community_variance_by_district
 mean_community_score_by_district <- data.frame(district_number = mean_community_score_by_district$Group.1, community_avg = round( mean_community_score_by_district$x))
 
 p2 <- ggplot(data = mean_community_score_by_district, aes(x = district_number, y = community_avg)) 
@@ -99,26 +104,32 @@ p2 + geom_bar(stat="identity", fill = "steelblue") + geom_text(aes(label=communi
 
 # the bar plot is very similar to the housing prices
 # potential multicollinearity problem, will need to be adressed
-mean_community_variance_by_district <- aggregate(training_set[, 19:19 ], list(training_set$district), var)
-mean_community_variance_by_district
-mean_community_variance_by_district <- data.frame(district_number = variance_community_score_by_district$Group.1, community_avg = round( mean_community_variance_by_district$x))
-
-p2 <- ggplot(data = mean_community_score_by_district, aes(x = district_number, y = community_avg)) 
-p2 + geom_bar(stat="identity", fill = "steelblue") + geom_text(aes(label=community_var), vjust=1.5, color="white", size=3.5) +
-  theme(axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1)) + 
-  ggtitle("Distribution of Variance Community Score Across Districts")
 # TODO: find a better way to explore collinearity
-
+#We can explore collinearity once we have selected our model.
 # TODO : how are building types distributed across districts? 
-building_type_by_district <- aggregate(training_set[, 11:11 ], list(training_set$district), )
-
-var_price_by_district <- aggregate(training_set[, 4:4 ], list(training_set$district), var)
-var_price_by_district <- data.frame(district_number = var_price_by_district$Group.1, var_price = round( var_price_by_district$x))
-p <- ggplot(data = var_price_by_district, aes(x = district_number, y = var_price)) 
-p + geom_bar(stat="identity", fill = "steelblue") + geom_text(aes(label=var_price), vjust=1.5, color="white", size=3.5) +
-  theme(axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1)) +
-  ggtitle("Distribution of Var House Price Across Districts")
-
+#district <- aggregate(training_set[, 11:11 ], list(training_set$district), count)
+#The overall proportion of 4 building types.
+district=data_simple[data_simple$district,]
+building_type_by_district <- table(district$buildingType)
+pie(building_type_by_district)
+#district1=data_simple[data_simple$district==2,]
+#table2 <- table(district1$buildingType)
+# use the pie chart to show how building types are distributed within each district
+par(mfrow=c(4,4)) # 1 row and 3 columns for plots
+pie( table(data_simple$buildingType[data_simple$district==1]), col=blues9, xlab="district 1",radius=1)
+pie( table(data_simple$buildingType[data_simple$district==2]), col=blues9, xlab="district 2",radius=1)
+pie( table(data_simple$buildingType[data_simple$district==3]), col=blues9, xlab="district 3",radius=1)
+mtext(side=3, text="Frequency of buildingtype by district",font=2,line=2,adj=1.2)
+pie( table(data_simple$buildingType[data_simple$district==4]), col=blues9, xlab="district 4",radius=1)
+pie( table(data_simple$buildingType[data_simple$district==5]), col=blues9, xlab="district 5",radius=1)
+pie( table(data_simple$buildingType[data_simple$district==6]), col=blues9, xlab="district 6",radius=1)
+pie( table(data_simple$buildingType[data_simple$district==7]), col=blues9, xlab="district 7",radius=1)
+pie( table(data_simple$buildingType[data_simple$district==8]), col=blues9, xlab="district 8",radius=1)
+pie( table(data_simple$buildingType[data_simple$district==9]), col=blues9, xlab="district 9",radius=1)
+pie( table(data_simple$buildingType[data_simple$district==10]), col=blues9, xlab="district 10",radius=1)
+pie( table(data_simple$buildingType[data_simple$district==11]), col=blues9, xlab="district 11",radius=1)
+pie( table(data_simple$buildingType[data_simple$district==12]), col=blues9, xlab="district 12",radius=1)
+pie( table(data_simple$buildingType[data_simple$district==13]), col=blues9, xlab="district 13",radius=1)
 #plot correlation matrices(heatmap)
 corrs_all2<-corrs_all[-c(1,2),-c(1,2)]
 #library(reshape2)
@@ -138,7 +149,7 @@ training_set$district <- relevel(training_set$district, ref = 13) # use the chea
 model_basic2 <- lm(totalPrice ~ square + district + bathRoom + drawingRoom + livingRoom + subway+ communityAverage, data = training_set)
 summary(model_basic2)
 
-# TODO: model selection methods (either backwards or forwards, do we need to implement ourselves?)
+# TODO: model selection methods (either backwards or forwards, do we need to implement ourselves? I think so)
 # to try:
 # - stepwise model selection 
 # - using anova in case stepwise is not accepted
