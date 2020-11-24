@@ -14,6 +14,7 @@ data_simple <- na.omit( data.frame(data_simple))
 # some columns are char when they have to be integers (eg. livingRoom, drawingRoom, etc)
 # livingroom is actually the bedroom, and drawingroom is actually the living room
 data_simple$bedRoom <- as.numeric(data_simple$livingRoom)
+data_simple$bedRoom <- as.numeric(data_simple$livingRoom)
 data_simple$livingRoom <- as.numeric(data_simple$drawingRoom)
 data_simple$bathRoom <- as.numeric(data_simple$bathRoom)
 data_simple$constructionTime <- as.numeric(data_simple$constructionTime)
@@ -30,7 +31,7 @@ str(data_simple)
 N <- length(data_simple$id)
 set.seed(2020)
 all_indices = seq(1, N)
-training_indices = sort(sample(1:N, 3*N/5, replace = FALSE))
+training_indices = sort(sample(1:N, 4*N/5, replace = FALSE))
 
 
 training_set = data_simple[training_indices,]
@@ -115,21 +116,21 @@ pie(building_type_by_district)
 #district1=data_simple[data_simple$district==2,]
 #table2 <- table(district1$buildingType)
 # use the pie chart to show how building types are distributed within each district
-par(mfrow=c(4,4)) # 1 row and 3 columns for plots
-pie( table(data_simple$buildingType[data_simple$district==1]), col=blues9, xlab="district 1",radius=1)
-pie( table(data_simple$buildingType[data_simple$district==2]), col=blues9, xlab="district 2",radius=1)
-pie( table(data_simple$buildingType[data_simple$district==3]), col=blues9, xlab="district 3",radius=1)
-mtext(side=3, text="Frequency of buildingtype by district",font=2,line=2,adj=1.2)
-pie( table(data_simple$buildingType[data_simple$district==4]), col=blues9, xlab="district 4",radius=1)
-pie( table(data_simple$buildingType[data_simple$district==5]), col=blues9, xlab="district 5",radius=1)
-pie( table(data_simple$buildingType[data_simple$district==6]), col=blues9, xlab="district 6",radius=1)
-pie( table(data_simple$buildingType[data_simple$district==7]), col=blues9, xlab="district 7",radius=1)
-pie( table(data_simple$buildingType[data_simple$district==8]), col=blues9, xlab="district 8",radius=1)
-pie( table(data_simple$buildingType[data_simple$district==9]), col=blues9, xlab="district 9",radius=1)
-pie( table(data_simple$buildingType[data_simple$district==10]), col=blues9, xlab="district 10",radius=1)
-pie( table(data_simple$buildingType[data_simple$district==11]), col=blues9, xlab="district 11",radius=1)
-pie( table(data_simple$buildingType[data_simple$district==12]), col=blues9, xlab="district 12",radius=1)
-pie( table(data_simple$buildingType[data_simple$district==13]), col=blues9, xlab="district 13",radius=1)
+#par(mfrow=c(4,4)) # 4 rows and 4 columns for the pie charts
+#pie( table(data_simple$buildingType[data_simple$district==1]), col=blues9, xlab="district 1",radius=1)
+#pie( table(data_simple$buildingType[data_simple$district==2]), col=blues9, xlab="district 2",radius=1)
+#pie( table(data_simple$buildingType[data_simple$district==3]), col=blues9, xlab="district 3",radius=1)
+#mtext(side=3, text="Frequency of buildingtype by district",font=2,line=2,adj=1.2)
+#pie( table(data_simple$buildingType[data_simple$district==4]), col=blues9, xlab="district 4",radius=1)
+#pie( table(data_simple$buildingType[data_simple$district==5]), col=blues9, xlab="district 5",radius=1)
+#pie( table(data_simple$buildingType[data_simple$district==6]), col=blues9, xlab="district 6",radius=1)
+#pie( table(data_simple$buildingType[data_simple$district==7]), col=blues9, xlab="district 7",radius=1)
+#pie( table(data_simple$buildingType[data_simple$district==8]), col=blues9, xlab="district 8",radius=1)
+#pie( table(data_simple$buildingType[data_simple$district==9]), col=blues9, xlab="district 9",radius=1)
+#pie( table(data_simple$buildingType[data_simple$district==10]), col=blues9, xlab="district 10",radius=1)
+#pie( table(data_simple$buildingType[data_simple$district==11]), col=blues9, xlab="district 11",radius=1)
+#pie( table(data_simple$buildingType[data_simple$district==12]), col=blues9, xlab="district 12",radius=1)
+#pie( table(data_simple$buildingType[data_simple$district==13]), col=blues9, xlab="district 13",radius=1)
 #plot correlation matrices(heatmap)
 corrs_all2<-corrs_all[-c(1,2),-c(1,2)]
 #library(reshape2)
@@ -149,8 +150,36 @@ training_set$district <- relevel(training_set$district, ref = 13) # use the chea
 model_basic2 <- lm(totalPrice ~ square + district + bathRoom + drawingRoom + livingRoom + subway+ communityAverage, data = training_set)
 summary(model_basic2)
 
-# TODO: model selection methods (either backwards or forwards, do we need to implement ourselves? I think so)
+# TODO: model selection methods (either backwards or forwards, do we need to implement ourselves?)
 # to try:
 # - stepwise model selection 
 # - using anova in case stepwise is not accepted
-# - 
+
+# - Try forward
+library(MASS)
+# Fit the full model
+full.model <- lm(totalPrice ~square+livingRoom+drawingRoom+kitchen+bathRoom+buildingType+constructionTime
+                 +renovationCondition+buildingStructure+elevator+fiveYearsProperty+subway+district+communityAverage
+                 , data = training_set)
+# Stepwise regression model
+step.model <- stepAIC(full.model, direction = "both", 
+                      trace = FALSE)
+summary(step.model)
+#backward
+step.model.backward <- stepAIC(full.model, direction = "backward", 
+                               trace = FALSE)
+summary(step.model.backward)
+#forward
+step.model.forward <- stepAIC(full.model, direction = "forward", 
+                              trace = FALSE)
+summary(step.model.forward)
+#colinearity detection
+DAAG::vif(step.model.backward)
+testing_set<-na.omit( data.frame(testing_set)) 
+prediction<-predict(step.model.backward,newdata=testing_set)
+
+index<-seq(1, dim(testing_set)[1], by=1)
+testing_set$index=index
+testing_set$index
+prediction$index=index
+
